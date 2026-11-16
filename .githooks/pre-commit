@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+: "${FOLKBENCH_DISTRIBUTION_TOOL_ROOT:?Set the reviewed public tooling checkout}"
+exec bun "$FOLKBENCH_DISTRIBUTION_TOOL_ROOT/scripts/distribution/subsite-repository-check.ts" --staged

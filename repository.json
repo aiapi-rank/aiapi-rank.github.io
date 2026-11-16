@@ -1,0 +1,14 @@
+{
+  "owner": "aiapi-rank",
+  "name": "aiapi-rank.github.io",
+  "visibility": "public",
+  "default_branch": "main",
+  "description": "AI API 公开价格快照与厂商站点列表，数据来自 Folkbench。",
+  "homepage": "https://aiapi-rank.github.io/",
+  "topics": [
+    "llm",
+    "ai-api",
+    "pricing",
+    "public-data"
+  ]
+}
