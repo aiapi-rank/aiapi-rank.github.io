@@ -3,12 +3,27 @@
   "name": "aiapi-rank.github.io",
   "visibility": "public",
   "default_branch": "main",
-  "description": "AI API 公开价格快照与厂商站点列表，数据来自 Folkbench。",
+  "description": "AI API 公开价格快照与厂商站点列表，数据来自 Folkbench。 | AI API价格对比：Claude / GPT / Gemini API中转站公开标价、官方参考价与厂商站点（排序按站点规则，含合作档位与运营加权，部分数据为展示样本）",
   "homepage": "https://aiapi-rank.github.io/",
   "topics": [
-    "llm",
     "ai-api",
+    "ai-pricing",
+    "api-pricing",
+    "api-proxy",
+    "api-relay",
+    "chatgpt",
+    "claude",
+    "deepseek",
+    "gemini",
+    "github-pages",
+    "gpt",
+    "llm",
+    "llm-api",
+    "llm-pricing",
+    "openai",
+    "openai-api",
     "pricing",
-    "public-data"
+    "public-data",
+    "relay-api"
   ]
 }

@@ -1,7 +1,10 @@
 name: Publish pages
 on:
+  repository_dispatch:
+    types: [public-snapshot-archived]
   schedule:
     - cron: '0 13 * * *'
+    - cron: '35 15 * * *'
   workflow_dispatch:
     inputs:
       data_ref:
@@ -12,6 +15,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -42,15 +46,52 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version: 1.3.14
-      - name: Generate and validate pages
+      - id: fresh
+        name: Skip automatic runs whose snapshot is already live
+        if: github.event_name != 'workflow_dispatch'
+        run: bun tooling/scripts/distribution/cli.ts publish-check --site aiapi-rank --data-root data
+      - id: build
+        name: Generate and validate pages
+        if: steps.fresh.outputs.skip != 'true'
         env:
+          INDEXNOW_KEY: ${{ vars.INDEXNOW_KEY }}
           BING_SITE_VERIFICATION: ${{ vars.BING_SITE_VERIFICATION }}
           BAIDU_SITE_VERIFICATION: ${{ vars.BAIDU_SITE_VERIFICATION }}
           GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
         run: bun tooling/scripts/distribution/cli.ts subsite --site aiapi-rank --data-root data --out dist
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+        if: steps.fresh.outputs.skip != 'true'
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        if: steps.fresh.outputs.skip != 'true'
         with:
           path: dist
       - id: deploy
+        if: steps.fresh.outputs.skip != 'true'
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+      - name: Submit updated URLs to IndexNow (log only)
+        if: steps.fresh.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          INDEXNOW_KEY: ${{ vars.INDEXNOW_KEY }}
+          ARCHIVE_DATE: ${{ steps.build.outputs.archive_date }}
+        run: bun tooling/scripts/distribution/cli.ts indexnow --site aiapi-rank --out dist --date "$ARCHIVE_DATE"
+      - name: Report a failed automatic publish
+        if: failure() && github.event_name != 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='公开快照站点自动发布失败'
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+          body="触发方式：${EVENT}。运行记录：${RUN_URL}。线上继续保留上一版页面；请查看日志后重新运行，或等待下一次自动触发。"
+          if [ -n "$number" ]; then gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "$body"; else gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"; fi
+      - name: Close the failure issue after a successful publish
+        if: success() && steps.fresh.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='公开快照站点自动发布失败'
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+          if [ -n "$number" ]; then gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment "已恢复发布：${RUN_URL}"; fi
